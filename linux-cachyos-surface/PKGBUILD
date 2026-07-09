@@ -167,8 +167,8 @@ fi
 pkgbase="linux-$_pkgsuffix"
 
 pkgbase="$pkgbase"
-_major=6.19
-_minor=8
+_major=7.1
+_minor=3
 #_minorc=$((_minor+1))
 #_rcver=rc8
 pkgver=${_major}.${_minor}
@@ -206,7 +206,7 @@ _surface_ver="${pkgver}"
 
 # Upstream linux-surface packaging revision. Tracks the trailing suffix on
 # upstream tags like `arch-6.19.8-3` (https://github.com/linux-surface/linux-surface/tags)
-_surface_rel=3
+_surface_rel=1
 _surface_ref="arch-${_surface_ver}-${_surface_rel}"
 arch=('x86_64')
 url="https://github.com/jonpetersathan/linux-cachyos-surface"
@@ -229,8 +229,9 @@ makedepends=(
 )
 
 _patchsource="https://raw.githubusercontent.com/cachyos/kernel-patches/master/${_major}"
-_surface_repo_url="https://github.com/linux-surface/linux-surface.git"
-_surface_raw_url="https://raw.githubusercontent.com/linux-surface/linux-surface/${_surface_ref}"
+_surface_repo_url="https://github.com/Apiznel/linux-surface.git#branch=7.1"
+_surface_raw_url="https://raw.githubusercontent.com/Apiznel/linux-surface/refs/heads/7.1"
+# "https://raw.githubusercontent.com/linux-surface/linux-surface/${_surface_ref}"
 _nv_ver=590.48.01
 _nv_pkg="NVIDIA-Linux-x86_64-${_nv_ver}"
 _nv_open_pkg="NVIDIA-kernel-module-source-${_nv_ver}"
@@ -313,7 +314,8 @@ prepare() {
     echo "${pkgbase#linux}" > localversion.20-pkgname
 
     echo "Checking out linux-surface ref: ${_surface_ref}..."
-    git -C "$srcdir/linux-surface" checkout --quiet "$_surface_ref"
+    git -C "$srcdir/linux-surface" checkout --quiet "7.1"
+    # "$_surface_ref"
 
     local src
     for src in "${source[@]}"; do
