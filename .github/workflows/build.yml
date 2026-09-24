@@ -27,11 +27,11 @@ jobs:
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY"
           sudo apt-get clean
 
-          echo "Setting up 8GB swap file..."
-          sudo fallocate -l 8G /swapfile
-          sudo chmod 600 /swapfile
-          sudo mkswap /swapfile
-          sudo swapon /swapfile
+          echo "Setting up 8GB extra swap file..."
+          sudo fallocate -l 8G /swapfile_extra
+          sudo chmod 600 /swapfile_extra
+          sudo mkswap /swapfile_extra
+          sudo swapon /swapfile_extra
 
           free -h
           df -h
