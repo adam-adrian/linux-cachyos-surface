@@ -58,11 +58,14 @@ jobs:
             -e EXPORT_PKG=1 \
             -e SYNC_DATABASE=1 \
             -e CCACHE_DIR=/home/notroot/.buildcache \
+            -e CCACHE_MAXSIZE=6G \
+            -e CCACHE_COMPILERCHECK=content \
+            -e CCACHE_SLOPPINESS=time_macros,file_stat_matches,locale \
             -e KBUILD_BUILD_TIMESTAMP='' \
             -v /tmp/ccache:/home/notroot/.buildcache \
             -v "$PWD/$TARGET_DIR:/pkg" \
             cachyos/docker-makepkg-v3 \
-            -c "sudo sed -i '/\[options\]/a DisableSandbox' /etc/pacman.conf && sudo pacman-key --init && sudo pacman-key --populate archlinux cachyos && sudo pacman -Sy --noconfirm archlinux-keyring cachyos-keyring ccache && sudo sed -i 's/!ccache/ccache/' /etc/makepkg.conf && ccache --set-config=max_size=6G && ccache --set-config=sloppiness=time_macros,file_stat_matches,locale && ccache --set-config=compiler_check=content && ccache -s && /run.sh && ccache -s"
+            -c "sudo sed -i '/\[options\]/a DisableSandbox' /etc/pacman.conf && sudo pacman-key --init && sudo pacman-key --populate archlinux cachyos && sudo pacman -Sy --noconfirm archlinux-keyring cachyos-keyring && sudo sed -i 's/!ccache/ccache/' /etc/makepkg.conf && /run.sh"
 
       - name: Verify Built Packages
         run: |

@@ -226,6 +226,7 @@ makedepends=(
   tar
   xz
   zstd
+  ccache
 )
 
 _patchsource="https://raw.githubusercontent.com/cachyos/kernel-patches/master/${_major}"

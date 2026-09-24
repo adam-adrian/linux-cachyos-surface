@@ -18,6 +18,7 @@ pkgbase = linux-cachyos-surface
 	makedepends = tar
 	makedepends = xz
 	makedepends = zstd
+	makedepends = ccache
 	makedepends = git
 	makedepends = clang
 	makedepends = llvm
