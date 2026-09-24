@@ -65,7 +65,7 @@ jobs:
             -v /tmp/ccache:/home/notroot/.buildcache \
             -v "$PWD/$TARGET_DIR:/pkg" \
             cachyos/docker-makepkg-v3 \
-            -c "sudo sed -i '/\[options\]/a DisableSandbox' /etc/pacman.conf && sudo pacman-key --init && sudo pacman-key --populate archlinux cachyos && sudo pacman -Sy --noconfirm archlinux-keyring cachyos-keyring && sudo sed -i 's/!ccache/ccache/' /etc/makepkg.conf && /run.sh"
+            -c "sudo sed -i '/\[options\]/a DisableSandbox' /etc/pacman.conf && sudo pacman-key --init && sudo pacman-key --populate archlinux cachyos && sudo pacman -Sy --noconfirm archlinux-keyring cachyos-keyring && sudo sed -i 's/!ccache/ccache/' /etc/makepkg.conf && sudo sed -i 's/pacman -Syyu --noconfirm/pacman -Syyu --noconfirm ccache/' /run.sh && /run.sh"
 
       - name: Verify Built Packages
         run: |
