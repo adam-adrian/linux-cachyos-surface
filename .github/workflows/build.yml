@@ -16,7 +16,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 360
-
+    env:
+      TARGET_DIR: ${{ inputs.kernel_type || 'linux-cachyos-surface' }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -69,7 +70,7 @@ jobs:
 
       - name: Verify Built Packages
         run: |
-          ls -lh "$TARGET_DIR"/*.pkg.tar.zst
+          ls -lh "${TARGET_DIR:-linux-cachyos-surface}"/*.pkg.tar.zst
 
       - name: Upload Kernel Packages
         uses: actions/upload-artifact@v4
