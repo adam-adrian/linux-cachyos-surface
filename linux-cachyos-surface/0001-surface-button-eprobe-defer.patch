@@ -1,0 +1,52 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Adam Adrian <4.adam.adrian@gmail.com>
+Date: Wed, 12 Aug 2026 12:50:00 +0700
+Subject: [PATCH] input/misc/soc_button_array: fix boot-time race with
+ pinctrl GPIO controller
+
+On Surface devices using MSHW0040 (Pro 4 and later, Book 1/2, Laptop),
+soc_button_array's probe() calls gpiod_count() to look up the button
+GPIOs. If the platform's pinctrl driver (pinctrl_sunrisepoint on
+Skylake-based Pro 4, pinctrl_icelake/pinctrl_tigerlake on later
+generations) has not yet registered its gpiochip when udev coldplugs
+MSHW0040, gpiod_count() returns -ENOENT and the driver bails out with
+a hard -ENODEV. Because this is not -EPROBE_DEFER, the driver core
+never retries once the pinctrl module finishes loading, and the
+physical power/volume buttons stay dead until the module is manually
+reloaded.
+
+Ported from jonpetersathan/linux-cachyos-surface-patches (patches/6.18
+and patches/6.12, 0009-surface-button.patch), which fixes the same
+race for wake-from-suspend on Surface Laptop 5 / Surface Pro 9 (see
+linux-surface/linux-surface issues #1910, #1805, #1392, #1481).
+Adjusted here to also softdep on pinctrl_sunrisepoint for Skylake-era
+Pro 4 hardware.
+
+Patchset: surface-button-local
+---
+ drivers/input/misc/soc_button_array.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/input/misc/soc_button_array.c b/drivers/input/misc/soc_button_array.c
+index 43b5d56383e3..8f2a1c7e0000 100644
+--- a/drivers/input/misc/soc_button_array.c
++++ b/drivers/input/misc/soc_button_array.c
+@@ -454,8 +454,9 @@ static int soc_button_probe(struct platform_device *pdev)
+
+ 	error = gpiod_count(dev, NULL);
+ 	if (error < 0) {
+-		dev_dbg(dev, "no GPIO attached, ignoring...\n");
+-		return -ENODEV;
++		if (error == -ENOENT)
++			return -EPROBE_DEFER;
++		return error;
+ 	}
+
+ 	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
+@@ -604,3 +605,4 @@ module_platform_driver(soc_button_driver);
+
+ MODULE_DESCRIPTION("Windows-compatible SoC Button Array driver");
+ MODULE_LICENSE("GPL");
++MODULE_SOFTDEP("pre: pinctrl_sunrisepoint pinctrl_icelake pinctrl_tigerlake");
+--
+2.52.0

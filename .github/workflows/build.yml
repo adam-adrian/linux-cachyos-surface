@@ -1,0 +1,55 @@
+name: Build CachyOS Surface Kernel
+
+on:
+  workflow_dispatch:
+    inputs:
+      kernel_type:
+        description: 'Target package folder'
+        required: true
+        default: 'linux-cachyos-surface'
+        type: choice
+        options:
+          - linux-cachyos-surface
+          - linux-cachyos-surface-lts
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Free Disk Space
+        run: |
+          echo "Freeing disk space..."
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY"
+          sudo apt-get clean
+          df -h
+
+      - name: Build Arch Package via CachyOS Container
+        run: |
+          TARGET_DIR="${{ inputs.kernel_type || 'linux-cachyos-surface' }}"
+          echo "Building kernel in $TARGET_DIR..."
+
+          # Buka permission agar builduser di container bisa nulis
+          chmod -R 777 "$TARGET_DIR"
+
+          docker run --rm \
+            -e EXPORT_PKG=1 \
+            -e SYNC_DATABASE=1 \
+            -v "$PWD/$TARGET_DIR:/pkg" \
+            cachyos/docker-makepkg-v3
+
+      - name: Verify Built Packages
+        run: |
+          TARGET_DIR="${{ inputs.kernel_type || 'linux-cachyos-surface' }}"
+          ls -lh "$TARGET_DIR"/*.pkg.tar.zst
+
+      - name: Upload Kernel Packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.kernel_type || 'linux-cachyos-surface' }}-7.2-packages
+          path: ${{ inputs.kernel_type || 'linux-cachyos-surface' }}/*.pkg.tar.zst
+          retention-days: 7
