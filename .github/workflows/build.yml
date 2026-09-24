@@ -38,11 +38,12 @@ jobs:
 
           docker run --rm \
             --entrypoint bash \
+            --security-opt seccomp=unconfined \
             -e EXPORT_PKG=1 \
             -e SYNC_DATABASE=1 \
             -v "$PWD/$TARGET_DIR:/pkg" \
             cachyos/docker-makepkg-v3 \
-            -c "sudo pacman-key --init && sudo pacman-key --populate archlinux cachyos && sudo pacman -Sy --noconfirm archlinux-keyring cachyos-keyring && /run.sh"
+            -c "sudo sed -i '/\[options\]/a DisableSandbox' /etc/pacman.conf && sudo pacman-key --init && sudo pacman-key --populate archlinux cachyos && sudo pacman -Sy --noconfirm archlinux-keyring cachyos-keyring && /run.sh"
       - name: Verify Built Packages
         run: |
           TARGET_DIR="${{ inputs.kernel_type || 'linux-cachyos-surface' }}"
