@@ -42,7 +42,7 @@ jobs:
             -e SYNC_DATABASE=1 \
             -v "$PWD/$TARGET_DIR:/pkg" \
             cachyos/docker-makepkg-v3 \
-            -c "sudo sed -i 's/.*SigLevel.*/SigLevel = Never/g' /etc/pacman.conf && /run.sh"
+            -c "sudo pacman-key --init && sudo pacman-key --populate archlinux cachyos && sudo pacman -Sy --noconfirm archlinux-keyring cachyos-keyring && /run.sh"
       - name: Verify Built Packages
         run: |
           TARGET_DIR="${{ inputs.kernel_type || 'linux-cachyos-surface' }}"
