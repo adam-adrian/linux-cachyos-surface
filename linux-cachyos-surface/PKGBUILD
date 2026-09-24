@@ -243,6 +243,7 @@ source=(
     "linux-surface::git+${_surface_repo_url}"
     "0001-surface-button-eprobe-defer.patch"
     "0002-ov8865-stale-mode-fix.patch"
+    "0003-ov8865-surface-hflip-polarity.patch"
     )
 
 # LLVM makedepends
@@ -324,7 +325,7 @@ prepare() {
         src="${src%%::*}"
         # Skip nvidia patches and local surface button fix (applied after surface patchset)
         [[ "$src" == "${_patchsource}"/misc/nvidia/*.patch ]] && continue
-        [[ "$src" == *"surface-button-eprobe-defer"* || "$src" == *"ov8865-stale-mode-fix"* ]] && continue
+        [[ "$src" == *"surface-button-eprobe-defer"* || "$src" == *"ov8865-"* ]] && continue
         src="${src##*/}"
         src="${src%.zst}"
         [[ $src = *.patch ]] || continue
@@ -347,6 +348,9 @@ prepare() {
 
     echo "Applying ov8865 rear camera stale mode fix..."
     patch -Np1 < "$srcdir/0002-ov8865-stale-mode-fix.patch"
+
+    echo "Applying ov8865 surface hflip polarity fix..."
+    patch -Np1 < "$srcdir/0003-ov8865-surface-hflip-polarity.patch"
 
     echo "Setting config..."
     ./scripts/kconfig/merge_config.sh -m ../config ../surface-${_major}.config
@@ -828,4 +832,5 @@ b2sums=('SKIP'
         'SKIP'
         'SKIP'
         '92351ce6697f8c6490dbedebcb76c83e91817d688a2c8498926e2399b778c79bd0cb5cf54a3379ef7a079ec87b714998a4b2bf2a67e690b83f58b99a38f10b49'
-        '09b702c6bc139e0b98cf93b978163a54b829935e787f5ae1c41e328d38f4d993b5ad94ddf339fbd2e4845b36f2cbd5cd64a3e666e3d1d4921621cb7d844a7d4b')
+        '09b702c6bc139e0b98cf93b978163a54b829935e787f5ae1c41e328d38f4d993b5ad94ddf339fbd2e4845b36f2cbd5cd64a3e666e3d1d4921621cb7d844a7d4b'
+        'd39e01e8b6ee54b2f7c5175b8d25b105b565914c4c6f9db179515076beec8c545daaf2daf839a84270192b215cedd945d1b65d404ba1fd406bb8aaf26f15023a')

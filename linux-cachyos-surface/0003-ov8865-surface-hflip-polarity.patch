@@ -1,0 +1,55 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Adam Adrian <4.adam.adrian@gmail.com>
+Date: Wed, 24 Sep 2026 23:15:00 +0700
+Subject: [PATCH] media: i2c: ov8865: Invert horizontal flip polarity on
+ Microsoft Surface devices
+
+On Microsoft Surface devices (Surface Pro 4/5/6, Surface Go 2/3), the
+OV8865 rear camera sensor is mounted such that libcamera's automatic
+HFlip (triggered by camera_sensor_rotation=180) results in a horizontally
+mirrored image.
+
+Invert the horizontal flip control polarity when running on Microsoft
+Surface hardware so that the physical sensor register receives a no-flip
+value (0) when libcamera requests HFlip=1, producing a natural, upright,
+non-mirrored image.
+
+Patchset: cameras-local
+---
+--- a/drivers/media/i2c/ov8865.c
++++ b/drivers/media/i2c/ov8865.c
+@@ -8,6 +8,7 @@
+ #include <linux/clk.h>
+ #include <linux/delay.h>
+ #include <linux/device.h>
++#include <linux/dmi.h>
+ #include <linux/i2c.h>
+ #include <linux/module.h>
+ #include <linux/of_graph.h>
+@@ -2202,11 +2203,24 @@
+ 				  enable ? bits : 0);
+ }
+ 
++static const struct dmi_system_id ov8865_surface_dmi[] = {
++	{
++		.ident = "Microsoft Surface Devices",
++		.matches = {
++			DMI_EXACT_MATCH(DMI_SYS_VENDOR, "Microsoft Corporation"),
++		},
++	},
++	{}
++};
++
+ static int ov8865_flip_horz_configure(struct ov8865_sensor *sensor, bool enable)
+ {
+ 	u8 bits = OV8865_FORMAT2_FLIP_HORZ_ISP_EN |
+ 		  OV8865_FORMAT2_FLIP_HORZ_SENSOR_EN;
+ 
++	if (dmi_check_system(ov8865_surface_dmi))
++		enable = !enable;
++
+ 	return ov8865_update_bits(sensor, OV8865_FORMAT2_REG, bits,
+ 				  enable ? bits : 0);
+ }
+--
+2.54.0
