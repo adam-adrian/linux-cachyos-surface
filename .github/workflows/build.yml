@@ -35,26 +35,37 @@ jobs:
 
           free -h
           df -h
+      - name: Setup Ccache Storage
+        uses: actions/cache@v4
+        with:
+          path: /tmp/ccache
+          key: kernel-ccache-7.2-${{ hashFiles('linux-cachyos-surface/config') }}-${{ github.run_id }}
+          restore-keys: |
+            kernel-ccache-7.2-${{ hashFiles('linux-cachyos-surface/config') }}-
+            kernel-ccache-7.2-
 
       - name: Build Arch Package via CachyOS Container
         run: |
           TARGET_DIR="${{ inputs.kernel_type || 'linux-cachyos-surface' }}"
           echo "Building kernel in $TARGET_DIR..."
 
-          # Buka permission agar builduser di container bisa nulis
-          chmod -R 777 "$TARGET_DIR"
+          mkdir -p /tmp/ccache
+          chmod -R 777 /tmp/ccache "$TARGET_DIR"
 
           docker run --rm \
             --entrypoint bash \
             --security-opt seccomp=unconfined \
             -e EXPORT_PKG=1 \
             -e SYNC_DATABASE=1 \
+            -e CCACHE_DIR=/home/notroot/.buildcache \
+            -e KBUILD_BUILD_TIMESTAMP='' \
+            -v /tmp/ccache:/home/notroot/.buildcache \
             -v "$PWD/$TARGET_DIR:/pkg" \
             cachyos/docker-makepkg-v3 \
-            -c "sudo sed -i '/\[options\]/a DisableSandbox' /etc/pacman.conf && sudo pacman-key --init && sudo pacman-key --populate archlinux cachyos && sudo pacman -Sy --noconfirm archlinux-keyring cachyos-keyring && /run.sh"
+            -c "sudo sed -i '/\[options\]/a DisableSandbox' /etc/pacman.conf && sudo pacman-key --init && sudo pacman-key --populate archlinux cachyos && sudo pacman -Sy --noconfirm archlinux-keyring cachyos-keyring ccache && sudo sed -i 's/!ccache/ccache/' /etc/makepkg.conf && ccache --set-config=max_size=6G && ccache --set-config=sloppiness=time_macros,file_stat_matches,locale && ccache --set-config=compiler_check=content && ccache -s && /run.sh && ccache -s"
+
       - name: Verify Built Packages
         run: |
-          TARGET_DIR="${{ inputs.kernel_type || 'linux-cachyos-surface' }}"
           ls -lh "$TARGET_DIR"/*.pkg.tar.zst
 
       - name: Upload Kernel Packages

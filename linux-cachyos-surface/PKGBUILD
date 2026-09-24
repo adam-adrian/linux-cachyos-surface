@@ -304,7 +304,7 @@ esac
 
 export KBUILD_BUILD_HOST=cachyos
 export KBUILD_BUILD_USER="$pkgbase"
-export KBUILD_BUILD_TIMESTAMP="$(date -Ru${SOURCE_DATE_EPOCH:+d @$SOURCE_DATE_EPOCH})"
+export KBUILD_BUILD_TIMESTAMP="${KBUILD_BUILD_TIMESTAMP:-$(date -Ru${SOURCE_DATE_EPOCH:+d @$SOURCE_DATE_EPOCH})}"
 
 _die() { error "$@" ; exit 1; }
 
