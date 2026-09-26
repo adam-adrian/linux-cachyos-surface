@@ -1,66 +1,79 @@
 # CachyOS Kernel for Surface Devices
 
-This repository includes the files needed to build an optimized CachyOS kernel including custom patches for Microsoft Surface devices. The patches are based on the work from the linux-surface repository. The patches have been updated to ensure compatibility with CachyOS's patches.
+This repository contains the PKGBUILD and patches needed to build an optimized [CachyOS](https://github.com/CachyOS/linux-cachyos) kernel with [linux-surface](https://github.com/linux-surface/linux-surface) support, tailored with custom hardware fixes for Microsoft Surface devices (particularly tested on the Surface Pro 5 / model 1796).
 
-The Microsoft Surface patches and per-version config fragment are pulled directly from the official [linux-surface/linux-surface](https://github.com/linux-surface/linux-surface) repository at build time. The git ref to check out is controlled by the `_surface_ref` variable in each `PKGBUILD`:
+This branch (`7.2`) targets the **Linux 7.2** mainline series (currently `7.2.7-1`), pulling upstream CachyOS base optimizations (BORE scheduler, BBR3, ntsync, zstd) together with hardware patches for Surface devices.
 
-- `linux-cachyos-surface` builds against the pre-patched kernel tarball published by CachyOS at [CachyOS/linux/releases](https://github.com/CachyOS/linux/releases) (e.g. `cachyos-6.19.8-1.tar.gz`). This tarball is vanilla Linux with all the CachyOS base optimisations (BORE, BBR3, cachy, fixes, ntsync, t2, zstd, amd-cache-optimizer, …) pre-applied — it replaces the now-removed `0001-cachyos-base-all.patch` for kernel 6.18+. The packaging revision is selected by `_tagrel` (independent of this PKGBUILD's `pkgrel`). The linux-surface tag to check out is built from `_surface_ver` (kernel version part, defaults to `${pkgver}`) and `_surface_rel` (e.g. `3`), giving a default `_surface_ref="arch-${_surface_ver}-${_surface_rel}"`. **It's important to keep the CachyOS and linux-surface kernel versions aligned** — running a surface patch set built against a different point release can break hardware support (e.g. the touchscreen stopping working). `_surface_ver` is split out only as an escape hatch for the times the two projects publish different point releases; override it only when you've confirmed a near-version patch set still works.
-- `linux-cachyos-surface-lts` deliberately stays on a real kernel.org LTS line (currently Linux 6.12.x, supported by upstream LTS through approximately December 2026). It uses the stock kernel.org tarball plus the still-present `${_major}/all/0001-cachyos-base-all.patch` meta-patch from `cachyos/kernel-patches` — that meta-patch was retired for 6.18+ but remains available for 6.12. The PKGBUILD includes a commented-out template for the pre-baked tarball switch (along the lines used by the mainline variant) for the future kernel bump past 6.12. Its `_surface_ref` defaults to `master` because upstream's `arch_lts-*` tag series stopped at 4.19. Note: upstream `CachyOS/linux-cachyos`'s own `linux-cachyos-lts` variant has redefined "lts" to mean "previous stable cachyos kernel"; this repo intentionally keeps the original kernel.org-LTS meaning so Surface owners get the longest maintenance window per major bump.
+---
 
-To bump the mainline kernel: pick a tag from [CachyOS/linux/releases](https://github.com/CachyOS/linux/releases) that **matches an available [linux-surface/linux-surface/tags](https://github.com/linux-surface/linux-surface/tags) kernel version**, then update `_major`/`_minor`/`_tagrel` and `_surface_rel`. With `_surface_ver` defaulting to `${pkgver}`, that's usually the only change needed. Only set `_surface_ver` explicitly if the two projects diverge on the point release for that month — and prefer waiting for them to realign, since mismatched versions can break Surface hardware (touchscreen, type cover, sensors). The patch set itself is discovered automatically from `patches/${_major}/*.patch` in the upstream repo.
+## Hardware Patches Included
 
-_**NOTE:** The configuration files and prebuilt kernels are optimized for X86_64_v3 instruction sets, this should be fine for most Surface devices, but might not work on very old (1st or 2nd gen) devices._
+In addition to upstream `linux-surface` patches, this branch includes three dedicated hardware fixes:
 
-## Variants
+1. **`0001-surface-button-eprobe-defer.patch` (Physical Button Race Fix)**:
+   - Fixes a boot-time race condition where volume and power buttons fail to register on Surface devices.
+   - Converts `-ENOENT` return to `-EPROBE_DEFER` in `soc_button_array.c` and adds a soft dependency on `pinctrl_sunrisepoint` so GPIO pin controllers are ready before probing.
 
-### linux-cachyos-surface
+2. **`0002-ov8865-stale-mode-fix.patch` (Rear Camera Greenscreen & Stall Fix)**:
+   - Fixes an issue where the OmniVision OV8865 rear camera fails to stream (producing a solid green frame or hanging) when restarted or when used with the DW9719 voice-coil focus motor.
+   - Forces full sensor register reprogramming on stream start whenever `hw_mode != mode`.
 
-This variant is as close to the original cachyos kernel as possible, it is build using Clang LTO mode `full` with llvm for maximum performance.
+3. **`0003-ov8865-surface-hflip-polarity.patch` (Rear Camera Horizontal Mirror Fix)**:
+   - Reverses the horizontal flip polarity in `ov8865_flip_horz_configure()` specifically for Microsoft Surface DMI matches (`Microsoft Corporation`).
+   - Fixes horizontally inverted video at the driver/register level without breaking `libcamera`'s automatic transform calculations (`VFLIP=1, HFLIP=0`).
 
-### linux-cachyos-surface-lts
+---
 
-This variant is based on the original cachyos lts kernel, but is build with gcc for better stability and support.
+## Build & CI Configuration
+
+Building kernels locally on tablet hardware like the Surface Pro can be slow and painful. Compilation is designed to be offloaded to **GitHub Actions CI**.
+
+Key build configurations:
+- **Clang ThinLTO (`_use_llvm_lto:=thin`)**: Configured with ThinLTO instead of Full LTO. Full LTO exceeds 20 GB of memory during `ld.lld vmlinux.o` on 16 GB CI runners, triggering Out-Of-Memory (OOM Error 137). ThinLTO runs multi-threaded within ~3–4 GB of RAM while preserving link-time optimizations.
+- **Compiler Caching (`ccache`)**: Configured with persistent GitHub Actions caching, significantly reducing incremental build times.
+- **Landlock Compatibility**: Pacman 7.0 download sandbox restrictions are handled in the container runtime (`--security-opt seccomp=unconfined`).
+
+---
 
 ## Installation Instructions
 
-### Build from source
+### 1. Build via GitHub Actions CI (Recommended)
 
-To build the kernel and header files from source, run the following commands within CachyOS (or any Arch derivative):
+1. Fork or push to your branch (`7.2`).
+2. Trigger the `Build CachyOS Surface Kernel` workflow from the **Actions** tab (or via `workflow_dispatch`).
+3. Download the built `.pkg.tar.zst` artifacts from the completed run.
+
+### 2. Build Locally from Source
+
+To build the packages locally using `makepkg`:
 
 ```bash
 sudo pacman -S base-devel
-git clone https://github.com/jonpetersathan/linux-cachyos-surface
+git clone -b 7.2 https://github.com/adam-adrian/linux-cachyos-surface.git
 cd linux-cachyos-surface/linux-cachyos-surface
-makepkg -si --skipinteg
+makepkg -si
 ```
 
-Or alternatively using docker:
+_**NOTE:** Ensure your machine has at least 16 GB of available RAM/swap. ThinLTO is enabled by default in the PKGBUILD._
+
+### 3. Install Prebuilt Packages
+
+After downloading or compiling the packages, install them using `pacman`:
 
 ```bash
-docker run --name kernelbuild -v $PWD:/pkg cachyos/docker-makepkg-v3
-sudo pacman -U linux-cachyos-surface-*.pkg.tar.zst
+sudo pacman -U linux-cachyos-surface-7.2.*.pkg.tar.zst linux-cachyos-surface-headers-7.2.*.pkg.tar.zst
 ```
 
-_**NOTE:** Per default the linux-cachyos-surface kernel is configured in LTO mode `full`, this may take a bit longer to compile and requires more ram. It can be changed by updating the following line in the PKGBUILD:_
-```bash
-# Clang LTO mode, only available with the "llvm" compiler - options are "none", "full" or "thin".
-# ATTENTION - one of three predefined values should be selected!
-# "full: uses 1 thread for Linking, slow and uses more memory, theoretically with the highest performance gains."
-# "thin: uses multiple threads, faster and uses less memory, may have a lower runtime performance than Full."
-# "thin-dist: Similar to thin, but uses a distributed model rather than in-process: https://discourse.llvm.org/t/rfc-distributed-thinlto-build-for-kernel/85934"
-# "none: disable LTO
-: "${_use_llvm_lto:=full}"
-```
-
-### Install prebuilt packages
-
-You can also just install one of the prebuilt kernels by downloading the kernel and header files from [here](https://github.com/jonpetersathan/linux-cachyos-surface/releases) and run:
+If using a Unified Kernel Image (UKI) or systemd-boot / rEFInd:
 
 ```bash
-sudo pacman -U linux-cachyos-surface-*.pkg.tar.zst
+sudo mkinitcpio -P
 ```
+
+---
 
 ## Acknowledgements
 
-- Maximilian Luz: [surface-linux/surface-linux](https://github.com/linux-surface/linux-surface)
-- Peter Lung: [CachyOS/linux-cachyos](https://github.com/CachyOS/linux-cachyos)
+- **Maximilian Luz & contributors**: [linux-surface/linux-surface](https://github.com/linux-surface/linux-surface)
+- **Peter Jung & CachyOS team**: [CachyOS/linux-cachyos](https://github.com/CachyOS/linux-cachyos)
+- **Apiznel**: Initial physical button probe deferral fix (PR #2233)
