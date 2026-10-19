@@ -1,6 +1,6 @@
 pkgbase = linux-cachyos-surface
 	pkgdesc = Linux EEVDF + LTO + AutoFDO + Propeller Cachy Sauce Kernel by CachyOS with other patches and improvements.
-	pkgver = 7.2.7
+	pkgver = 7.2.11
 	pkgrel = 1
 	url = https://github.com/jonpetersathan/linux-cachyos-surface
 	arch = x86_64
@@ -26,20 +26,18 @@ pkgbase = linux-cachyos-surface
 	options = !strip
 	options = !debug
 	options = !lto
-	source = https://github.com/CachyOS/linux/releases/download/cachyos-7.2.7-1/cachyos-7.2.7-1.tar.gz
+	source = https://github.com/CachyOS/linux/releases/download/cachyos-7.2.11-1/cachyos-7.2.11-1.tar.gz
 	source = config
-	source = https://raw.githubusercontent.com/Apiznel/linux-surface/refs/heads/7.2/configs/surface-7.2.config
-	source = linux-surface::git+https://github.com/Apiznel/linux-surface.git#branch=7.2
+	source = https://raw.githubusercontent.com/linux-surface/linux-surface/arch-7.2.11-1/configs/surface-7.2.config
+	source = linux-surface::git+https://github.com/linux-surface/linux-surface.git
 	source = 0001-surface-button-eprobe-defer.patch
-	source = 0002-ov8865-stale-mode-fix.patch
-	source = 0003-ov8865-surface-hflip-polarity.patch
+	source = 0002-ov8865-surface-hflip-polarity.patch
 	source = https://raw.githubusercontent.com/cachyos/kernel-patches/master/7.2/misc/dkms-clang.patch
 	b2sums = SKIP
 	b2sums = 21343697f5f1647aadbdec8a4aa477b10622e5ae04fa07fcf6f9bab67dece7180872676bdc49a90de5d273c2c13127c5812a7ca67dbd9edce3e26e8c38d358d1
 	b2sums = SKIP
 	b2sums = SKIP
 	b2sums = 92351ce6697f8c6490dbedebcb76c83e91817d688a2c8498926e2399b778c79bd0cb5cf54a3379ef7a079ec87b714998a4b2bf2a67e690b83f58b99a38f10b49
-	b2sums = 09b702c6bc139e0b98cf93b978163a54b829935e787f5ae1c41e328d38f4d993b5ad94ddf339fbd2e4845b36f2cbd5cd64a3e666e3d1d4921621cb7d844a7d4b
 	b2sums = d39e01e8b6ee54b2f7c5175b8d25b105b565914c4c6f9db179515076beec8c545daaf2daf839a84270192b215cedd945d1b65d404ba1fd406bb8aaf26f15023a
 
 pkgname = linux-cachyos-surface
@@ -58,7 +56,7 @@ pkgname = linux-cachyos-surface
 	provides = NTSYNC-MODULE
 	provides = VHBA-MODULE
 	provides = ADIOS-MODULE
-	provides = linux-cachyos-lto=7.2.7-1
+	provides = linux-cachyos-lto=7.2.11-1
 	replaces = linux-cachyos-lto
 
 pkgname = linux-cachyos-surface-headers
@@ -68,5 +66,5 @@ pkgname = linux-cachyos-surface-headers
 	depends = clang
 	depends = llvm
 	depends = lld
-	provides = linux-cachyos-lto-headers=7.2.7-1
+	provides = linux-cachyos-lto-headers=7.2.11-1
 	replaces = linux-cachyos-lto-headers

@@ -2,26 +2,21 @@
 
 This repository contains the PKGBUILD and patches needed to build an optimized [CachyOS](https://github.com/CachyOS/linux-cachyos) kernel with [linux-surface](https://github.com/linux-surface/linux-surface) support, tailored with custom hardware fixes for Microsoft Surface devices (particularly tested on the Surface Pro 5 / model 1796).
 
-This branch (`7.2`) targets the **Linux 7.2** mainline series (currently `7.2.7-1`), pulling upstream CachyOS base optimizations (BORE scheduler, BBR3, ntsync, zstd) together with hardware patches for Surface devices.
+This branch (`7.2`) targets the **Linux 7.2** mainline series (currently `7.2.11-1`), pulling upstream CachyOS base optimizations (BORE scheduler, BBR3, ntsync, zstd) together with hardware patches for Surface devices.
 
 ---
 
 ## Hardware Patches Included
 
-In addition to upstream `linux-surface` patches, this branch includes three dedicated hardware fixes:
+In addition to upstream `linux-surface` patches (which now include the OV8865 stale mode and PM runtime fixes as of 7.2.11), this branch includes two dedicated hardware fixes:
 
 1. **`0001-surface-button-eprobe-defer.patch` (Physical Button Race Fix)**:
    - Fixes a boot-time race condition where volume and power buttons fail to register on Surface devices.
    - Converts `-ENOENT` return to `-EPROBE_DEFER` in `soc_button_array.c` and adds a soft dependency on `pinctrl_sunrisepoint` so GPIO pin controllers are ready before probing.
 
-2. **`0002-ov8865-stale-mode-fix.patch` (Rear Camera Greenscreen & Stall Fix)**:
-   - Fixes an issue where the OmniVision OV8865 rear camera fails to stream (producing a solid green frame or hanging) when restarted or when used with the DW9719 voice-coil focus motor.
-   - Forces full sensor register reprogramming on stream start whenever `hw_mode != mode`.
-
-3. **`0003-ov8865-surface-hflip-polarity.patch` (Rear Camera Horizontal Mirror Fix)**:
+2. **`0002-ov8865-surface-hflip-polarity.patch` (Rear Camera Horizontal Mirror Fix)**:
    - Reverses the horizontal flip polarity in `ov8865_flip_horz_configure()` specifically for Microsoft Surface DMI matches (`Microsoft Corporation`).
    - Fixes horizontally inverted video at the driver/register level without breaking `libcamera`'s automatic transform calculations (`VFLIP=1, HFLIP=0`).
-
 ---
 
 ## Build & CI Configuration
@@ -76,4 +71,4 @@ sudo mkinitcpio -P
 
 - **Maximilian Luz & contributors**: [linux-surface/linux-surface](https://github.com/linux-surface/linux-surface)
 - **Peter Jung & CachyOS team**: [CachyOS/linux-cachyos](https://github.com/CachyOS/linux-cachyos)
-- **Apiznel**: Initial physical button probe deferral fix (PR #2233)
+- **Apiznel**: 7.2 patchset forward-porting & staging (PR #2233)
