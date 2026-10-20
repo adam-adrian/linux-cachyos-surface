@@ -39,7 +39,7 @@
 : "${_localmodcfg:=no}"
 
 # Path to the list of used modules
-: "${_localmodcfg_path:="$HOME/.config/modprobed.db"}"
+: "${_localmodcfg_path:="${XDG_DATA_HOME:-$HOME/.local/share}/modprobed-db/modprobed.db"}"
 
 # Use the current kernel's .config file
 # Enabling this option will use the .config of the RUNNING kernel rather than
@@ -60,11 +60,16 @@
 ### Running with a 1000HZ, 750Hz, 600 Hz, 500Hz, 300Hz, 250Hz and 100Hz tick rate
 : "${_HZ_ticks:=1000}"
 
-## Choose between perodic, idle or full
+## Choose between periodic, idle or full
 ### Full tickless can give higher performances in various cases but, depending on hardware, lower consistency.
 : "${_tickrate:=full}"
 
-## Choose between full(low-latency), lazy, voluntary or none
+## Choose between full, lazy or dynamic
+# Full: Makes all non-critical kernel code preemptible to reduce latency
+# Lazy: Same as full but instead of preempting immediately it waits for signals from the scheduler
+#       in an attempt to boost throughput.
+#       In practice, this doesn't seem to perform well as both throughput and latency suffer
+#       compared to full.
 : "${_preempt:=full}"
 
 ### Transparent Hugepages
@@ -115,6 +120,10 @@
 # This does replace the requirement of nvidia-open-dkms
 # Use this only if you have Turing+ GPU
 : "${_build_nvidia_open:=no}"
+
+# Builds the r8125 module and package it into its own package
+# Replaces requirement for r8125-dkms
+: "${_build_r8125:=no}"
 
 # Build a debug package with non-stripped vmlinux
 : "${_build_debug:=no}"
@@ -214,9 +223,13 @@ license=('GPL-2.0-only')
 options=('!strip' '!debug' '!lto')
 makedepends=(
   bc
+  binutils
   cpio
   gettext
+  glibc
   libelf
+  libgcc
+  openssl
   pahole
   perl
   python
@@ -224,7 +237,9 @@ makedepends=(
   rust-bindgen
   rust-src
   tar
+  xxhash
   xz
+  zlib
   zstd
   ccache
 )
@@ -232,7 +247,7 @@ makedepends=(
 _patchsource="https://raw.githubusercontent.com/cachyos/kernel-patches/master/${_major}"
 _surface_repo_url="https://github.com/linux-surface/linux-surface.git"
 _surface_raw_url="https://raw.githubusercontent.com/linux-surface/linux-surface/${_surface_ref}"
-_nv_ver=615.71.09
+_nv_ver=615.78.08
 _nv_pkg="NVIDIA-Linux-x86_64-${_nv_ver}"
 _nv_open_pkg="NVIDIA-kernel-module-source-${_nv_ver}"
 makedepends+=(git)
@@ -265,14 +280,18 @@ fi
 # ZFS support
 if [ "$_build_zfs" = "yes" ]; then
     makedepends+=(git)
-    source+=("git+https://github.com/cachyos/zfs.git#commit=743334913e5a5f60baf287bcc6d8a23515b02ac5")
+    source+=("git+https://github.com/cachyos/zfs.git#commit=71a9f9578616a90c3c14bb59629fb4d31bfd68d1")
 fi
 
 
 if [ "$_build_nvidia_open" = "yes" ]; then
     source+=("https://download.nvidia.com/XFree86/${_nv_open_pkg%"-$_nv_ver"}/${_nv_open_pkg}.tar.xz"
-             "${_patchsource}/misc/nvidia/0001-Enable-atomic-kernel-modesetting-by-default.patch"
-             "${_patchsource}/misc/nvidia/0002-Add-IBT-support.patch")
+             "${_patchsource}/misc/nvidia/0002-fix-dsc-correct-RC-parameter-tables-to-match-VESA-DS.patch"
+             "${_patchsource}/misc/nvidia/0003-fix-dp-add-Bigscreen-Beyond-VR-headset-to-WAR-databa.patch")
+fi
+
+if [ "$_build_r8125" = "yes" ]; then
+    source+=("git+https://github.com/aravance/r8125.git")
 fi
 
 # Use generated AutoFDO Profile
@@ -319,16 +338,19 @@ prepare() {
     git -C "$srcdir/linux-surface" checkout --quiet "${_surface_ref}"
 
     local src
-    for src in "${source[@]}"; do
-        src="${src%%::*}"
-        # Skip nvidia patches and local surface button fix (applied after surface patchset)
-        [[ "$src" == "${_patchsource}"/misc/nvidia/*.patch ]] && continue
-        [[ "$src" == *"surface-button-eprobe-defer"* || "$src" == *"ov8865-"* ]] && continue
-        src="${src##*/}"
+    for patch in "${source[@]}"; do
+        patch="${patch%%::*}"
+        # Skip local surface button fix and ov8865 hflip fix (applied after surface patchset)
+        [[ "$patch" == *"surface-button-eprobe-defer"* || "$patch" == *"ov8865-"* ]] && continue
+        src="${patch##*/}"
         src="${src%.zst}"
         [[ $src = *.patch ]] || continue
         echo "Applying patch $src..."
-        patch -Np1 < "../$src"
+        if [[ "$patch" == "${_patchsource}"/misc/nvidia/* ]]; then
+            patch -Np1 < "../$src" -d "${srcdir}/${_nv_open_pkg}"
+        else
+            patch -Np1 < "../$src"
+        fi
     done
 
     local _surface_patches_dir="$srcdir/linux-surface/patches/${_major}"
@@ -427,7 +449,7 @@ prepare() {
 
     ### Select tick type
     case "$_tickrate" in
-        perodic) scripts/config -d NO_HZ_IDLE -d NO_HZ_FULL -d NO_HZ -d NO_HZ_COMMON -e HZ_PERIODIC;;
+        periodic) scripts/config -d NO_HZ_IDLE -d NO_HZ_FULL -d NO_HZ -d NO_HZ_COMMON -e HZ_PERIODIC;;
         idle) scripts/config -d HZ_PERIODIC -d NO_HZ_FULL -e NO_HZ_IDLE  -e NO_HZ -e NO_HZ_COMMON;;
         full) scripts/config -d HZ_PERIODIC -d NO_HZ_IDLE -d CONTEXT_TRACKING_FORCE -e NO_HZ_FULL_NODEF -e NO_HZ_FULL -e NO_HZ -e NO_HZ_COMMON -e CONTEXT_TRACKING;;
         *) _die "The value '$_tickrate' is invalid. Choose the correct one again.";;
@@ -440,10 +462,8 @@ prepare() {
     # We should not set up the PREEMPT for RT kernels
     if [[ "$_cpusched" != "rt" && "$_cpusched" != "rt-bore" ]]; then
         case "$_preempt" in
-            full) scripts/config -e PREEMPT_DYNAMIC -e PREEMPT -d PREEMPT_VOLUNTARY -d PREEMPT_LAZY -d PREEMPT_NONE;;
-            lazy) scripts/config -e PREEMPT_DYNAMIC -d PREEMPT -d PREEMPT_VOLUNTARY -e PREEMPT_LAZY -d PREEMPT_NONE;;
-            voluntary) scripts/config -d PREEMPT_DYNAMIC -d PREEMPT -e PREEMPT_VOLUNTARY -d PREEMPT_LAZY -d PREEMPT_NONE;;
-            none) scripts/config -d PREEMPT_DYNAMIC -d PREEMPT -d PREEMPT_VOLUNTARY -d PREEMPT_LAZY -e PREEMPT_NONE;;
+            full) scripts/config -e PREEMPT -d PREEMPT_LAZY;;
+            lazy) scripts/config -d PREEMPT -e PREEMPT_LAZY;;
             *) _die "The value '$_preempt' is invalid. Choose the correct one again.";;
         esac
 
@@ -562,10 +582,7 @@ prepare() {
     local basedir="$(dirname "$(readlink "${srcdir}/config")")"
     cat .config > "${basedir}/config-${pkgver}-${pkgrel}${pkgbase#linux}"
 
-    if [ "$_build_nvidia_open" = "yes" ]; then
-        patch -Np1 -i "${srcdir}/0001-Enable-atomic-kernel-modesetting-by-default.patch" -d "${srcdir}/${_nv_open_pkg}/kernel-open"
-        patch -Np1 -i "${srcdir}/0002-Add-IBT-support.patch" -d "${srcdir}/${_nv_open_pkg}/"
-    fi
+
 }
 
 _sign_modules() {
@@ -578,8 +595,15 @@ _sign_modules() {
     local sign_cert="${srcdir}/${_srcname}/certs/signing_key.x509"
     local hash_algo="$(grep -Po 'CONFIG_MODULE_SIG_HASH="\K[^"]*' "${srcdir}/${_srcname}/.config")"
 
-    find "$1" -type f -name '*.ko' -print -exec \
-        "${sign_script}" "${hash_algo}" "${sign_key}" "${sign_cert}" '{}' \;
+    if [ "$_use_llvm_lto" != "none" ]; then
+        local strip_bin="llvm-strip"
+    else
+        local strip_bin="strip"
+    fi
+
+    find "$1" -type f -name '*.ko' -print \
+        -exec "${strip_bin}" --strip-debug '{}' \; \
+        -exec "${sign_script}" "${hash_algo}" "${sign_key}" "${sign_cert}" '{}' \;
 }
 
 build() {
@@ -616,6 +640,11 @@ build() {
             --with-udevdir=/lib/udev --libexecdir=/usr/lib/zfs --with-config=kernel \
             --with-linux="${srcdir}/$_srcname"
         make "${BUILD_FLAGS[@]}"
+    fi
+
+    if [ "$_build_r8125" = "yes" ]; then
+        cd "${srcdir}/r8125"
+        make "${BUILD_FLAGS[@]}" KERNELDIR="$srcdir/$_srcname" modules
     fi
 
 }
@@ -656,7 +685,17 @@ _package() {
 
 _package-headers() {
     pkgdesc="Headers and scripts for building modules for the $pkgdesc kernel"
-    depends=('pahole' "${pkgbase}")
+    depends=(binutils
+      glibc
+      libelf
+      libgcc
+      openssl
+      pahole
+      xxhash
+      zlib
+      zstd
+     "${pkgbase}")
+    provides=(LINUX-HEADERS)
 
     if _is_lto_kernel; then
         provides+=(linux-cachyos-lto-headers=$_kernver)
@@ -719,11 +758,16 @@ _package-headers() {
     if compgen -G "rust/*.so" 1>/dev/null; then
         install -Dt "$builddir/rust" rust/*.so
     fi
+    # Install generated Rust files
+    if [ -d rust/kernel ]; then
+        while IFS= read -r -d "" _gen; do
+            install -Dm644 "$_gen" "$builddir/$_gen"
+        done < <(find rust -type f -name 'generated_*.rs' -print0)
+    fi
 
     echo "Installing unstripped VDSO..."
     make INSTALL_MOD_PATH="$pkgdir/usr" vdso_install \
       link=  # Suppress build-id symlinks
-
     echo "Removing unneeded architectures..."
     local arch
     for arch in "$builddir"/arch/*/; do
@@ -810,11 +854,32 @@ _package-nvidia-open(){
     find "$pkgdir" -name '*.ko' -exec zstd --rm -19 -T0 {} +
 }
 
+_package-r8125() {
+    pkgdesc="r8125 modules for the $pkgbase kernel"
+    depends=("$pkgbase=$_kernver")
+    license=('GPL-2.0-only')
+
+    cd "$_srcname"
+    local modulesdir="$pkgdir/usr/lib/modules/$(<version)/extramodules"
+
+    cd "${srcdir}/r8125"
+    install -dm755 "${modulesdir}"
+    install -m644 src/*.ko "${modulesdir}"
+
+    _sign_modules "${modulesdir}"
+    find "$pkgdir" -name '*.ko' -exec zstd --rm -19 -T0 {} +
+
+    # Blacklist r8169 so that r8125 is used instead
+    install -dm755 "${pkgdir}/usr/lib/modprobe.d"
+    echo "install r8169 /usr/bin/modprobe r8125 || /usr/bin/modprobe --ignore-install r8169" > "${pkgdir}/usr/lib/modprobe.d/${pkgname}.conf"
+}
+
 pkgname=("$pkgbase")
 [ "$_build_debug" = "yes" ] && pkgname+=("$pkgbase-dbg")
 pkgname+=("$pkgbase-headers")
 [ "$_build_zfs" = "yes" ] && pkgname+=("$pkgbase-zfs")
 [ "$_build_nvidia_open" = "yes" ] && pkgname+=("$pkgbase-nvidia-open")
+[ "$_build_r8125" = "yes" ] && pkgname+=("$pkgbase-r8125")
 for _p in "${pkgname[@]}"; do
     eval "package_$_p() {
     $(declare -f "_package${_p#$pkgbase}")
