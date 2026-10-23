@@ -176,8 +176,8 @@ fi
 pkgbase="linux-$_pkgsuffix"
 
 pkgbase="$pkgbase"
-_major=7.2
-_minor=11
+_major=7.3
+_minor=0
 #_minorc=$((_minor+1))
 #_rcver=rc8
 pkgver=${_major}.${_minor}
@@ -189,7 +189,7 @@ _stable=${_major}.${_minor}
 # https://github.com/CachyOS/linux/releases (e.g. cachyos-6.19.12-2). This
 # is INDEPENDENT of this PKGBUILD's `pkgrel`. Bump when CachyOS re-cuts a
 # release for the same kernel version.
-_tagrel=1
+_tagrel=3
 
 # Top-level directory inside the CachyOS pre-patched kernel tarball, and
 # also the release tag name. The CachyOS/linux release tarball is a vanilla
@@ -245,8 +245,8 @@ makedepends=(
 )
 
 _patchsource="https://raw.githubusercontent.com/cachyos/kernel-patches/master/${_major}"
-_surface_repo_url="https://github.com/linux-surface/linux-surface.git"
-_surface_raw_url="https://raw.githubusercontent.com/linux-surface/linux-surface/${_surface_ref}"
+_surface_repo_url="https://github.com/Apiznel/linux-surface.git#branch=7.3"
+_surface_raw_url="https://raw.githubusercontent.com/Apiznel/linux-surface/refs/heads/7.3"
 _nv_ver=615.78.08
 _nv_pkg="NVIDIA-Linux-x86_64-${_nv_ver}"
 _nv_open_pkg="NVIDIA-kernel-module-source-${_nv_ver}"
@@ -264,6 +264,7 @@ source=(
 if _is_lto_kernel; then
     makedepends+=(clang llvm lld)
     source+=("${_patchsource}/misc/dkms-clang.patch")
+    b2sums+=('SKIP')
     BUILD_FLAGS=(
         CC=clang
         LD=ld.lld
@@ -334,8 +335,8 @@ prepare() {
     echo "-$pkgrel" > localversion.10-pkgrel
     echo "${pkgbase#linux}" > localversion.20-pkgname
 
-    echo "Checking out linux-surface ref: ${_surface_ref}..."
-    git -C "$srcdir/linux-surface" checkout --quiet "${_surface_ref}"
+    echo "Checking out linux-surface ref: ${_major}..."
+    git -C "$srcdir/linux-surface" checkout --quiet "${_major}"
 
     local src
     for patch in "${source[@]}"; do
@@ -888,7 +889,7 @@ for _p in "${pkgname[@]}"; do
 done
 
 b2sums=('SKIP'
-        '21343697f5f1647aadbdec8a4aa477b10622e5ae04fa07fcf6f9bab67dece7180872676bdc49a90de5d273c2c13127c5812a7ca67dbd9edce3e26e8c38d358d1'
+        'e21485bd3d917be15837eb51ddb9aeb4a0df5fb7b18ccbf1d520aff2340833935e441f634e4ae8482a21ff38a9dec9f320bec3459aedf15087909b6eb2cff7db'
         'SKIP'
         'SKIP'
         '92351ce6697f8c6490dbedebcb76c83e91817d688a2c8498926e2399b778c79bd0cb5cf54a3379ef7a079ec87b714998a4b2bf2a67e690b83f58b99a38f10b49'

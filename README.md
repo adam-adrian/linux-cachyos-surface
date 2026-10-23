@@ -2,7 +2,7 @@
 
 This repository contains the PKGBUILD and patches needed to build an optimized [CachyOS](https://github.com/CachyOS/linux-cachyos) kernel with [linux-surface](https://github.com/linux-surface/linux-surface) support, tailored with custom hardware fixes for Microsoft Surface devices (particularly tested on the Surface Pro 5 / model 1796).
 
-This branch (`7.2`) targets the **Linux 7.2** mainline series (currently `7.2.11-1`), pulling upstream CachyOS base optimizations (BORE scheduler, BBR3, ntsync, zstd) together with hardware patches for Surface devices.
+This branch (`7.3`) targets the **Linux 7.3** mainline series (currently `7.3.0-3`), pulling upstream CachyOS base optimizations (BORE scheduler, BBR3, ntsync, zstd) together with hardware patches for Surface devices (staging via Apiznel's 7.3 branch).
 
 ---
 
@@ -44,7 +44,7 @@ To build the packages locally using `makepkg`:
 
 ```bash
 sudo pacman -S base-devel
-git clone -b 7.2 https://github.com/adam-adrian/linux-cachyos-surface.git
+git clone -b 7.3 https://github.com/adam-adrian/linux-cachyos-surface.git
 cd linux-cachyos-surface/linux-cachyos-surface
 makepkg -si
 ```
@@ -56,7 +56,7 @@ _**NOTE:** Ensure your machine has at least 16 GB of available RAM/swap. ThinLTO
 After downloading or compiling the packages, install them using `pacman`:
 
 ```bash
-sudo pacman -U linux-cachyos-surface-7.2.*.pkg.tar.zst linux-cachyos-surface-headers-7.2.*.pkg.tar.zst
+sudo pacman -U linux-cachyos-surface-7.3.*.pkg.tar.zst linux-cachyos-surface-headers-7.3.*.pkg.tar.zst
 ```
 
 If using a Unified Kernel Image (UKI) or systemd-boot / rEFInd:
@@ -71,4 +71,4 @@ sudo mkinitcpio -P
 
 - **Maximilian Luz & contributors**: [linux-surface/linux-surface](https://github.com/linux-surface/linux-surface)
 - **Peter Jung & CachyOS team**: [CachyOS/linux-cachyos](https://github.com/CachyOS/linux-cachyos)
-- **Apiznel**: 7.2 patchset forward-porting & staging (PR #2233)
+- **Apiznel**: Linux 7.2 & 7.3 patchset forward-porting & staging

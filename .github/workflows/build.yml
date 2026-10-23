@@ -40,10 +40,10 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /tmp/ccache
-          key: kernel-ccache-7.2-${{ hashFiles('linux-cachyos-surface/config') }}-${{ github.run_id }}
+          key: kernel-ccache-7.3-${{ hashFiles('linux-cachyos-surface/config') }}-${{ github.run_id }}
           restore-keys: |
-            kernel-ccache-7.2-${{ hashFiles('linux-cachyos-surface/config') }}-
-            kernel-ccache-7.2-
+            kernel-ccache-7.3-${{ hashFiles('linux-cachyos-surface/config') }}-
+            kernel-ccache-7.3-
 
       - name: Build Arch Package via CachyOS Container
         run: |
@@ -75,6 +75,6 @@ jobs:
       - name: Upload Kernel Packages
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ inputs.kernel_type || 'linux-cachyos-surface' }}-7.2-packages
+          name: ${{ inputs.kernel_type || 'linux-cachyos-surface' }}-7.3-packages
           path: ${{ inputs.kernel_type || 'linux-cachyos-surface' }}/*.pkg.tar.zst
           retention-days: 7
