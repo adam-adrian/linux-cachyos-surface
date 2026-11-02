@@ -2,7 +2,7 @@
 
 This repository contains the PKGBUILD and patches needed to build an optimized [CachyOS](https://github.com/CachyOS/linux-cachyos) kernel with [linux-surface](https://github.com/linux-surface/linux-surface) support, tailored with custom hardware fixes for Microsoft Surface devices (particularly tested on the Surface Pro 5 / model 1796).
 
-This branch (`7.3`) targets the **Linux 7.3** mainline series (currently `7.3.0-3`), pulling upstream CachyOS base optimizations (BORE scheduler, BBR3, ntsync, zstd) together with hardware patches for Surface devices (staging via Apiznel's 7.3 branch).
+This branch (`7.3`) targets the **Linux 7.3** mainline series (currently `7.3.1-1`), pulling upstream CachyOS base optimizations (BORE scheduler, BBR3, ntsync, zstd) together with official hardware patches from [linux-surface](https://github.com/linux-surface/linux-surface).
 
 ---
 
@@ -71,4 +71,4 @@ sudo mkinitcpio -P
 
 - **Maximilian Luz & contributors**: [linux-surface/linux-surface](https://github.com/linux-surface/linux-surface)
 - **Peter Jung & CachyOS team**: [CachyOS/linux-cachyos](https://github.com/CachyOS/linux-cachyos)
-- **Apiznel**: Linux 7.2 & 7.3 patchset forward-porting & staging
+- **Apiznel**: Linux 7.2 & 7.3 patchset forward-porting & staging (PR #2233)

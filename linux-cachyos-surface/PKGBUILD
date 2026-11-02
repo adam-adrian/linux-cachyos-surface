@@ -177,7 +177,7 @@ pkgbase="linux-$_pkgsuffix"
 
 pkgbase="$pkgbase"
 _major=7.3
-_minor=0
+_minor=1
 #_minorc=$((_minor+1))
 #_rcver=rc8
 pkgver=${_major}.${_minor}
@@ -189,7 +189,7 @@ _stable=${_major}.${_minor}
 # https://github.com/CachyOS/linux/releases (e.g. cachyos-6.19.12-2). This
 # is INDEPENDENT of this PKGBUILD's `pkgrel`. Bump when CachyOS re-cuts a
 # release for the same kernel version.
-_tagrel=3
+_tagrel=1
 
 # Top-level directory inside the CachyOS pre-patched kernel tarball, and
 # also the release tag name. The CachyOS/linux release tarball is a vanilla
@@ -216,7 +216,7 @@ _surface_ver="${pkgver}"
 # Upstream linux-surface packaging revision. Tracks the trailing suffix on
 # upstream tags like `arch-6.19.8-3` (https://github.com/linux-surface/linux-surface/tags)
 _surface_rel=1
-_surface_ref="arch-${_surface_ver}-${_surface_rel}"
+_surface_ref="master"
 arch=('x86_64')
 url="https://github.com/jonpetersathan/linux-cachyos-surface"
 license=('GPL-2.0-only')
@@ -245,8 +245,8 @@ makedepends=(
 )
 
 _patchsource="https://raw.githubusercontent.com/cachyos/kernel-patches/master/${_major}"
-_surface_repo_url="https://github.com/Apiznel/linux-surface.git#branch=7.3"
-_surface_raw_url="https://raw.githubusercontent.com/Apiznel/linux-surface/refs/heads/7.3"
+_surface_repo_url="https://github.com/linux-surface/linux-surface.git"
+_surface_raw_url="https://raw.githubusercontent.com/linux-surface/linux-surface/${_surface_ref}"
 _nv_ver=615.78.08
 _nv_pkg="NVIDIA-Linux-x86_64-${_nv_ver}"
 _nv_open_pkg="NVIDIA-kernel-module-source-${_nv_ver}"
@@ -264,7 +264,6 @@ source=(
 if _is_lto_kernel; then
     makedepends+=(clang llvm lld)
     source+=("${_patchsource}/misc/dkms-clang.patch")
-    b2sums+=('SKIP')
     BUILD_FLAGS=(
         CC=clang
         LD=ld.lld
@@ -335,8 +334,8 @@ prepare() {
     echo "-$pkgrel" > localversion.10-pkgrel
     echo "${pkgbase#linux}" > localversion.20-pkgname
 
-    echo "Checking out linux-surface ref: ${_major}..."
-    git -C "$srcdir/linux-surface" checkout --quiet "${_major}"
+    echo "Checking out linux-surface ref: ${_surface_ref}..."
+    git -C "$srcdir/linux-surface" checkout --quiet "${_surface_ref}"
 
     local src
     for patch in "${source[@]}"; do
@@ -894,3 +893,6 @@ b2sums=('SKIP'
         'SKIP'
         '92351ce6697f8c6490dbedebcb76c83e91817d688a2c8498926e2399b778c79bd0cb5cf54a3379ef7a079ec87b714998a4b2bf2a67e690b83f58b99a38f10b49'
         'd39e01e8b6ee54b2f7c5175b8d25b105b565914c4c6f9db179515076beec8c545daaf2daf839a84270192b215cedd945d1b65d404ba1fd406bb8aaf26f15023a')
+if _is_lto_kernel; then
+    b2sums+=('SKIP')
+fi
