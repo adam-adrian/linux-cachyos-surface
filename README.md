@@ -2,19 +2,20 @@
 
 This repository contains the PKGBUILD and patches needed to build an optimized [CachyOS](https://github.com/CachyOS/linux-cachyos) kernel with [linux-surface](https://github.com/linux-surface/linux-surface) support, tailored with custom hardware fixes for Microsoft Surface devices (particularly tested on the Surface Pro 5 / model 1796).
 
-This branch (`7.3`) targets the **Linux 7.3** mainline series (currently `7.3.1-1`), pulling upstream CachyOS base optimizations (BORE scheduler, BBR3, ntsync, zstd) together with official hardware patches from [linux-surface](https://github.com/linux-surface/linux-surface).
+This branch (`7.3`) targets the **Linux 7.3** mainline series (currently CachyOS `7.3.4-1`), pulling upstream CachyOS base optimizations (BORE scheduler, BBR3, ntsync, zstd) together with the official hardware patchset from [linux-surface](https://github.com/linux-surface/linux-surface), pinned to a commit whose `patches/7.3/BASE` matches the kernel version.
 
 ---
 
 ## Hardware Patches Included
 
-In addition to upstream `linux-surface` patches (which now include the OV8865 stale mode and PM runtime fixes as of 7.2.11), this branch includes two dedicated hardware fixes:
+Upstream `linux-surface` now ships the fixes that used to live in this repo as local patches:
 
-1. **`0001-surface-button-eprobe-defer.patch` (Physical Button Race Fix)**:
-   - Fixes a boot-time race condition where volume and power buttons fail to register on Surface devices.
-   - Converts `-ENOENT` return to `-EPROBE_DEFER` in `soc_button_array.c` and adds a soft dependency on `pinctrl_sunrisepoint` so GPIO pin controllers are ready before probing.
+- **OV8865 stale mode / PM runtime fixes** (in mainline Linux 7.3).
+- **MSHW0040 boot-time GPIO race** (`0009-surface-button.patch`, `Input: soc_button_array: defer MSHW0040 probe until GPIO is ready`). It checks the power-button GPIO lookup inside `soc_device_check_MSHW0040()` and propagates only `-EPROBE_DEFER`, rather than the generic `-ENOENT` → `-EPROBE_DEFER` conversion that previously caused deferred-probe loops on Intel platforms with virtual GPIO resources. The local `0001-surface-button-eprobe-defer.patch` was therefore dropped.
 
-2. **`0002-ov8865-surface-hflip-polarity.patch` (Rear Camera Horizontal Mirror Fix)**:
+Only one local fix remains:
+
+1. **`0002-ov8865-surface-hflip-polarity.patch` (Rear Camera Horizontal Mirror Fix)**:
    - Reverses the horizontal flip polarity in `ov8865_flip_horz_configure()` specifically for Microsoft Surface DMI matches (`Microsoft Corporation`).
    - Fixes horizontally inverted video at the driver/register level without breaking `libcamera`'s automatic transform calculations (`VFLIP=1, HFLIP=0`).
 ---
