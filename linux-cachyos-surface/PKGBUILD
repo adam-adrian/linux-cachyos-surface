@@ -177,7 +177,7 @@ pkgbase="linux-$_pkgsuffix"
 
 pkgbase="$pkgbase"
 _major=7.3
-_minor=4
+_minor=6
 #_minorc=$((_minor+1))
 #_rcver=rc8
 pkgver=${_major}.${_minor}
@@ -211,7 +211,7 @@ _kernuname="${pkgver}-${_pkgsuffix}"
 # patchset only applies cleanly against that exact base. Bump together with
 # patches/${_major}/BASE (https://github.com/linux-surface/linux-surface/blob/<sha>/patches/7.3/BASE)
 # and with the CachyOS tarball version above.
-_surface_ref="ea852b4eff5ed641571e13766bda5bd9cf121983"
+_surface_ref="3c4b467134a90e07f8e444762bac0bf4be1d315e"
 arch=('x86_64')
 url="https://github.com/jonpetersathan/linux-cachyos-surface"
 license=('GPL-2.0-only')
